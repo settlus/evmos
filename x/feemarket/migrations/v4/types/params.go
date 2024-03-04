@@ -87,7 +87,7 @@ func DefaultParams() Params {
 	}
 }
 
-// Validate performs basic validation on fee market parameters.
+// Validate performs basic validation on feemarket parameters.
 func (p Params) Validate() error {
 	if p.BaseFeeChangeDenominator == 0 {
 		return fmt.Errorf("base fee change denominator cannot be 0")

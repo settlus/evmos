@@ -13,11 +13,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-// BeginBlock updates base fee
+// BeginBlock is used to update the value of the base fee.
 func (k *Keeper) BeginBlock(ctx sdk.Context, _ abci.RequestBeginBlock) {
 	baseFee := k.CalculateBaseFee(ctx)
 
-	// return immediately if base fee is nil
 	if baseFee == nil {
 		return
 	}
@@ -28,13 +27,14 @@ func (k *Keeper) BeginBlock(ctx sdk.Context, _ abci.RequestBeginBlock) {
 		telemetry.SetGauge(float32(baseFee.Int64()), "feemarket", "base_fee")
 	}()
 
-	// Store current base fee in event
-	ctx.EventManager().EmitEvents(sdk.Events{
-		sdk.NewEvent(
-			types.EventTypeFeeMarket,
-			sdk.NewAttribute(types.AttributeKeyBaseFee, baseFee.String()),
-		),
-	})
+	ctx.EventManager().EmitEvents(
+		sdk.Events{
+			sdk.NewEvent(
+				types.EventTypeFeeMarket,
+				sdk.NewAttribute(types.AttributeKeyBaseFee, baseFee.String()),
+			),
+		},
+	)
 }
 
 // EndBlock update block gas wanted.

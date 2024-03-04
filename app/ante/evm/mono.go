@@ -148,6 +148,8 @@ func (md MonoDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, ne
 		}
 
 		// 3. min gas price (global min fee)
+        // Since the base fee is a dynamic value, here we compute the effective fee the use would
+        // pay depending on the value provided for the tip and fee cap.
 		if txData.TxType() == ethtypes.DynamicFeeTxType && decUtils.BaseFee != nil {
 			feeAmt = txData.EffectiveFee(decUtils.BaseFee)
 			fee = sdkmath.LegacyNewDecFromBigInt(feeAmt)
