@@ -69,9 +69,9 @@ func createGenesisAccounts(accounts []sdktypes.AccAddress) []authtypes.GenesisAc
 // given balances.
 func getAccAddrsFromBalances(balances []banktypes.Balance) []sdktypes.AccAddress {
 	numberOfBalances := len(balances)
-	genAccounts := make([]sdktypes.AccAddress, 0, numberOfBalances)
-	for _, balance := range balances {
-		genAccounts = append(genAccounts, balance.GetAddress())
+	genAccounts := make([]sdktypes.AccAddress, numberOfBalances)
+	for i, balance := range balances {
+		genAccounts[i] = balance.GetAddress()
 	}
 	return genAccounts
 }
