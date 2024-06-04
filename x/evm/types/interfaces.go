@@ -6,12 +6,12 @@ import (
 	"math/big"
 
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/common"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 	feemarkettypes "github.com/evmos/evmos/v18/x/feemarket/types"
 )
 
@@ -42,20 +42,16 @@ type StakingKeeper interface {
 	GetValidatorByConsAddr(ctx sdk.Context, consAddr sdk.ConsAddress) (validator stakingtypes.Validator, found bool)
 }
 
+// Erc20Keeper defines the expected interface needed to instantiate ERC20 precompiles.
+type Erc20Keeper interface {
+	InstantiateERC20Precompile(ctx sdk.Context, contractAddr common.Address) (vm.PrecompiledContract, error)
+}
+
 // FeeMarketKeeper
 type FeeMarketKeeper interface {
 	GetBaseFee(ctx sdk.Context) *big.Int
 	GetParams(ctx sdk.Context) feemarkettypes.Params
 	CalculateBaseFee(ctx sdk.Context) *big.Int
-}
-
-// Event Hooks
-// These can be utilized to customize evm transaction processing.
-
-// EvmHooks event hooks for evm tx processing
-type EvmHooks interface {
-	// Must be called after tx is processed successfully, if return an error, the whole transaction is reverted.
-	PostTxProcessing(ctx sdk.Context, msg core.Message, receipt *ethtypes.Receipt) error
 }
 
 type (

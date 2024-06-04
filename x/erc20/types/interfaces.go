@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/vm"
 
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	"github.com/evmos/evmos/v18/x/evm/statedb"
 	evmtypes "github.com/evmos/evmos/v18/x/evm/types"
 )
@@ -36,9 +37,10 @@ type EVMKeeper interface {
 	GetAccountWithoutBalance(ctx sdk.Context, addr common.Address) *statedb.Account
 	EstimateGasInternal(c context.Context, req *evmtypes.EthCallRequest, fromType evmtypes.CallType) (*evmtypes.EstimateGasResponse, error)
 	ApplyMessage(ctx sdk.Context, msg core.Message, tracer vm.EVMLogger, commit bool) (*evmtypes.MsgEthereumTxResponse, error)
-	AddEVMExtensions(ctx sdk.Context, precompiles ...vm.PrecompiledContract) error
+	AddDynamicPrecompiles(ctx sdk.Context, precompiles ...vm.PrecompiledContract) error
 	DeleteAccount(ctx sdk.Context, addr common.Address) error
 	IsAvailablePrecompile(addr common.Address) bool
+	EnableDynamicPrecompiles(ctx sdk.Context, addresses ...common.Address) error
 	CallEVMWithData(
 		ctx sdk.Context,
 		from common.Address,
@@ -54,6 +56,11 @@ type EVMKeeper interface {
 		method string,
 		args ...interface{},
 	) (*evmtypes.MsgEthereumTxResponse, error)
+}
+
+// BankKeeper defines the expected interface needed to retrieve account balances.
+type BankKeeper interface {
+	bankkeeper.Keeper
 }
 
 type (

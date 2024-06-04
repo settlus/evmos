@@ -432,6 +432,9 @@ func NewEvmos(
 	evmKeeper := evmkeeper.NewKeeper(
 		appCodec, keys[evmtypes.StoreKey], tkeys[evmtypes.TransientKey], authtypes.NewModuleAddress(govtypes.ModuleName),
 		app.AccountKeeper, app.BankKeeper, stakingKeeper, app.FeeMarketKeeper,
+		// NOTE: Erc20Keeper is not defined yet, so a pointer is necessary
+		// until another solution is developed
+		&app.Erc20Keeper,
 		tracer, app.GetSubspace(evmtypes.ModuleName),
 	)
 
@@ -499,8 +502,8 @@ func NewEvmos(
 		app.Erc20Keeper, // Add ERC20 Keeper for ERC20 transfers
 	)
 	// We call this after setting the hooks to ensure that the hooks are set on the keeper
-	evmKeeper.WithPrecompiles(
-		evmkeeper.AvailablePrecompiles(
+	evmKeeper.WithStaticPrecompiles(
+		evmkeeper.AvailableStaticPrecompiles(
 			*stakingKeeper,
 			app.DistrKeeper,
 			app.BankKeeper,
@@ -523,12 +526,6 @@ func NewEvmos(
 	app.GovKeeper = *govKeeper.SetHooks(
 		govtypes.NewMultiGovHooks(
 			app.VestingKeeper.Hooks(),
-		),
-	)
-
-	app.EvmKeeper = app.EvmKeeper.SetHooks(
-		evmkeeper.NewMultiEvmHooks(
-			app.Erc20Keeper.Hooks(),
 		),
 	)
 

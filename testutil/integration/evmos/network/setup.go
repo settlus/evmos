@@ -34,6 +34,7 @@ import (
 	infltypes "github.com/evmos/evmos/v18/x/inflation/v1/types"
 
 	evmosutil "github.com/evmos/evmos/v18/utils"
+	erc20types "github.com/evmos/evmos/v18/x/erc20/types"
 	evmtypes "github.com/evmos/evmos/v18/x/evm/types"
 )
 
@@ -270,9 +271,11 @@ func genStateSetter[T proto.Message](moduleName string) genSetupFn {
 // genesisSetupFunctions contains the available genesis setup functions
 // that can be used to customize the network genesis
 var genesisSetupFunctions = map[string]genSetupFn{
-	evmtypes.ModuleName:  genStateSetter[*evmtypes.GenesisState](evmtypes.ModuleName),
-	govtypes.ModuleName:  genStateSetter[*govtypesv1.GenesisState](govtypes.ModuleName),
-	infltypes.ModuleName: genStateSetter[*infltypes.GenesisState](infltypes.ModuleName),
+	authtypes.ModuleName:  genStateSetter[*authtypes.GenesisState](authtypes.ModuleName),
+	erc20types.ModuleName: genStateSetter[*erc20types.GenesisState](erc20types.ModuleName),
+	evmtypes.ModuleName:   genStateSetter[*evmtypes.GenesisState](evmtypes.ModuleName),
+	govtypes.ModuleName:   genStateSetter[*govtypesv1.GenesisState](govtypes.ModuleName),
+	infltypes.ModuleName:  genStateSetter[*infltypes.GenesisState](infltypes.ModuleName),
 }
 
 // setDefaultAuthGenesisState sets the default auth genesis state
@@ -320,11 +323,14 @@ func customizeGenesis(
 ) (simapp.GenesisState, error) {
 	var err error
 	for mod, modGenState := range customGen {
-		if fn, found := genesisSetupFunctions[mod]; found {
-			genesisState, err = fn(evmosApp, genesisState, modGenState)
-			if err != nil {
-				return genesisState, err
-			}
+		fn, found := genesisSetupFunctions[mod]
+		if !found {
+			panic(fmt.Sprintf("invalid module name for custom genesis: %s", mod))
+		}
+
+		genesisState, err = fn(evmosApp, genesisState, modGenState)
+		if err != nil {
+			return genesisState, err
 		}
 	}
 	return genesisState, err

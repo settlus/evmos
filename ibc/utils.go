@@ -157,14 +157,30 @@ func DeriveDecimalsFromDenom(baseDenom string) (uint8, error) {
 	switch baseDenom[0] {
 	case 'u': // micro (u) -> 6 decimals
 		decimals = 6
+	case 'n': // nano (n) -> 9 decimals
+		decimals = 9
 	case 'a': // atto (a) -> 18 decimals
 		decimals = 18
 	default:
 		return decimals, errorsmod.Wrapf(
 			ErrInvalidBaseDenom,
-			"Should be either micro ('u[...]') or atto ('a[...]'); got: %q",
+			"Should be either micro ('u[...]'), nano ('n[...]') or atto ('a[...]'); got: %q",
 			baseDenom,
 		)
 	}
 	return decimals, nil
+}
+
+// IsNativeFromSourceChain checks if the given denom has only made a single hop.
+// It returns true if the denomination is single-hop, false otherwise.
+func IsNativeFromSourceChain(rawDenom string) bool {
+	// Parse the raw denomination to get its DenomTrace
+	denomTrace := transfertypes.ParseDenomTrace(rawDenom)
+
+	// Split the path of the DenomTrace into its components
+	pathComponents := strings.Split(denomTrace.Path, "/")
+
+	// Each hop in the path is represented by a pair of port and channel ids
+	// If the number of components in the path is equal to or more than 2, it has hopped multiple chains
+	return len(pathComponents) < 2
 }

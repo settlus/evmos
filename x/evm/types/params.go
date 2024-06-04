@@ -41,6 +41,8 @@ var (
 		"0x0000000000000000000000000000000000000803", // Vesting precompile
 		"0x0000000000000000000000000000000000000804", // Bank precompile
 	}
+	// DefaultActiveDynamicPrecompiles defines the default active dynamic precompiles
+	DefaultActiveDynamicPrecompiles []string
 	// DefaultExtraEIPs defines the default extra EIPs to be included
 	// On v15, EIP 3855 was enabled
 	DefaultExtraEIPs   = []int64{3855}
@@ -59,18 +61,20 @@ func NewParams(
 	enableCall bool,
 	config ChainConfig,
 	extraEIPs []int64,
-	activePrecompiles,
+	activeStaticPrecompiles []string,
 	evmChannels []string,
+	activeDynamicPrecompiles []string,
 ) Params {
 	return Params{
-		EvmDenom:            evmDenom,
-		AllowUnprotectedTxs: allowUnprotectedTxs,
-		EnableCreate:        enableCreate,
-		EnableCall:          enableCall,
-		ExtraEIPs:           extraEIPs,
-		ChainConfig:         config,
-		ActivePrecompiles:   activePrecompiles,
-		EVMChannels:         evmChannels,
+		EvmDenom:                 evmDenom,
+		AllowUnprotectedTxs:      allowUnprotectedTxs,
+		EnableCreate:             enableCreate,
+		EnableCall:               enableCall,
+		ExtraEIPs:                extraEIPs,
+		ChainConfig:              config,
+		ActiveStaticPrecompiles:  activeStaticPrecompiles,
+		EVMChannels:              evmChannels,
+		ActiveDynamicPrecompiles: activeDynamicPrecompiles,
 	}
 }
 
@@ -80,14 +84,15 @@ func NewParams(
 // from the EVM configuration.
 func DefaultParams() Params {
 	return Params{
-		EvmDenom:            DefaultEVMDenom,
-		EnableCreate:        DefaultEnableCreate,
-		EnableCall:          DefaultEnableCall,
-		ChainConfig:         DefaultChainConfig(),
-		ExtraEIPs:           DefaultExtraEIPs,
-		AllowUnprotectedTxs: DefaultAllowUnprotectedTxs,
-		ActivePrecompiles:   AvailableEVMExtensions,
-		EVMChannels:         DefaultEVMChannels,
+		EvmDenom:                 DefaultEVMDenom,
+		EnableCreate:             DefaultEnableCreate,
+		EnableCall:               DefaultEnableCall,
+		ChainConfig:              DefaultChainConfig(),
+		ExtraEIPs:                DefaultExtraEIPs,
+		AllowUnprotectedTxs:      DefaultAllowUnprotectedTxs,
+		ActiveStaticPrecompiles:  AvailableEVMExtensions,
+		EVMChannels:              DefaultEVMChannels,
+		ActiveDynamicPrecompiles: DefaultActiveDynamicPrecompiles,
 	}
 }
 
@@ -135,7 +140,11 @@ func (p Params) Validate() error {
 		return err
 	}
 
-	if err := ValidatePrecompiles(p.ActivePrecompiles); err != nil {
+	if err := ValidatePrecompiles(p.ActiveStaticPrecompiles); err != nil {
+		return err
+	}
+
+	if err := ValidatePrecompiles(p.ActiveDynamicPrecompiles); err != nil {
 		return err
 	}
 
@@ -151,34 +160,30 @@ func (p Params) EIPs() []int {
 	return eips
 }
 
-// HasCustomPrecompiles returns true if the ActivePrecompiles slice is not empty.
-func (p Params) HasCustomPrecompiles() bool {
-	return len(p.ActivePrecompiles) > 0
-}
-
-// GetActivePrecompilesAddrs is a util function that the Active Precompiles
-// as a slice of addresses.
-func (p Params) GetActivePrecompilesAddrs() []common.Address {
-	precompiles := make([]common.Address, len(p.ActivePrecompiles))
-	for i, precompile := range p.ActivePrecompiles {
-		precompiles[i] = common.HexToAddress(precompile)
-	}
-	return precompiles
-}
-
 // IsEVMChannel returns true if the channel provided is in the list of
 // EVM channels
 func (p Params) IsEVMChannel(channel string) bool {
 	return slices.Contains(p.EVMChannels, channel)
 }
 
-// IsActivePrecompile returns true if the given precompile address is
+// IsActiveStaticPrecompile returns true if the given precompile address is
 // registered as an active precompile.
-func (p Params) IsActivePrecompile(address string) bool {
-	_, found := sort.Find(len(p.ActivePrecompiles), func(i int) int {
-		return strings.Compare(address, p.ActivePrecompiles[i])
+func (p Params) IsActiveStaticPrecompile(address common.Address) bool {
+	addrHex := address.Hex()
+	_, found := sort.Find(len(p.ActiveStaticPrecompiles), func(i int) int {
+		return strings.Compare(addrHex, p.ActiveStaticPrecompiles[i])
 	})
 
+	return found
+}
+
+// IsActiveDynamicPrecompile returns true if the given precompile address is
+// registered as an active dynamic precompile.
+func (p Params) IsActiveDynamicPrecompile(address common.Address) bool {
+	addrHex := address.Hex()
+	_, found := sort.Find(len(p.ActiveDynamicPrecompiles), func(i int) int {
+		return strings.Compare(addrHex, p.ActiveDynamicPrecompiles[i])
+	})
 	return found
 }
 
@@ -231,6 +236,7 @@ func validateChainConfig(i interface{}) error {
 }
 
 // ValidatePrecompiles checks if the precompile addresses are valid and unique.
+// TODO: Should be checked for static+dynamic
 func ValidatePrecompiles(i interface{}) error {
 	precompiles, ok := i.([]string)
 	if !ok {

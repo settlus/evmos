@@ -3,6 +3,7 @@ package types
 import (
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	ethparams "github.com/ethereum/go-ethereum/params"
 
 	"github.com/stretchr/testify/require"
@@ -25,7 +26,7 @@ func TestParamsValidate(t *testing.T) {
 		},
 		{
 			name:    "valid",
-			params:  NewParams(DefaultEVMDenom, false, true, true, DefaultChainConfig(), extraEips, nil, nil),
+			params:  NewParams(DefaultEVMDenom, false, true, true, DefaultChainConfig(), extraEips, nil, nil, nil),
 			expPass: true,
 		},
 		{
@@ -52,7 +53,7 @@ func TestParamsValidate(t *testing.T) {
 			name: "unsorted precompiles",
 			params: Params{
 				EvmDenom: DefaultEVMDenom,
-				ActivePrecompiles: []string{
+				ActiveStaticPrecompiles: []string{
 					"0x0000000000000000000000000000000000000801",
 					"0x0000000000000000000000000000000000000800",
 				},
@@ -87,7 +88,7 @@ func TestParamsValidate(t *testing.T) {
 
 func TestParamsEIPs(t *testing.T) {
 	extraEips := []int64{2929, 1884, 1344}
-	params := NewParams("ara", false, true, true, DefaultChainConfig(), extraEips, nil, nil)
+	params := NewParams("ara", false, true, true, DefaultChainConfig(), extraEips, nil, nil, nil)
 	actual := params.EIPs()
 
 	require.Equal(t, []int{2929, 1884, 1344}, actual)
@@ -167,24 +168,24 @@ func TestIsLondon(t *testing.T) {
 func TestIsActivePrecompile(t *testing.T) {
 	t.Parallel()
 
-	precompileAddr := "0x0000000000000000000000000000000000000800"
+	precompileAddr := common.HexToAddress("0x0000000000000000000000000000000000000800")
 
 	testCases := []struct {
 		name      string
-		malleate  func() (Params, string)
+		malleate  func() (Params, common.Address)
 		expActive bool
 	}{
 		{
 			name: "inactive precompile",
-			malleate: func() (Params, string) {
+			malleate: func() (Params, common.Address) {
 				return Params{}, precompileAddr
 			},
 			expActive: false,
 		},
 		{
 			name: "active precompile",
-			malleate: func() (Params, string) {
-				return Params{ActivePrecompiles: []string{precompileAddr}}, precompileAddr
+			malleate: func() (Params, common.Address) {
+				return Params{ActiveStaticPrecompiles: []string{precompileAddr.Hex()}}, precompileAddr
 			},
 			expActive: true,
 		},
@@ -199,7 +200,7 @@ func TestIsActivePrecompile(t *testing.T) {
 			require.NotNil(t, tc.malleate, "test case must provide malleate function")
 			params, precompile := tc.malleate()
 
-			active := params.IsActivePrecompile(precompile)
+			active := params.IsActiveStaticPrecompile(precompile)
 			require.Equal(t, tc.expActive, active, "expected different active status for precompile: %s", precompile)
 		})
 	}

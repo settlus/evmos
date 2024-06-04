@@ -48,15 +48,14 @@ type Keeper struct {
 	stakingKeeper types.StakingKeeper
 	// fetch EIP1559 base fee and parameters
 	feeMarketKeeper types.FeeMarketKeeper
+	// Erc20Keeper
+	erc20Keeper types.Erc20Keeper
 
 	// chain ID number obtained from the context's chain id
 	eip155ChainID *big.Int
 
 	// Tracer used to collect execution traces from the EVM transaction execution
 	tracer string
-
-	// EVM Hooks for tx post-processing
-	hooks types.EvmHooks
 
 	// Legacy subspace
 	ss paramstypes.Subspace
@@ -76,6 +75,7 @@ func NewKeeper(
 	bankKeeper types.BankKeeper,
 	sk types.StakingKeeper,
 	fmk types.FeeMarketKeeper,
+	erc20Keeper types.Erc20Keeper,
 	tracer string,
 	ss paramstypes.Subspace,
 ) *Keeper {
@@ -97,6 +97,7 @@ func NewKeeper(
 		bankKeeper:      bankKeeper,
 		stakingKeeper:   sk,
 		feeMarketKeeper: fmk,
+		erc20Keeper:     erc20Keeper,
 		storeKey:        storeKey,
 		transientKey:    transientKey,
 		tracer:          tracer,
@@ -351,34 +352,4 @@ func (k Keeper) AddTransientGasUsed(ctx sdk.Context, gasUsed uint64) (uint64, er
 	}
 	k.SetTransientGasUsed(ctx, result)
 	return result, nil
-}
-
-// ----------------------------------------------------------------------------
-// Hooks
-// ----------------------------------------------------------------------------
-
-// SetHooks sets the hooks for the EVM module
-// It should be called only once during initialization, it panic if called more than once.
-func (k *Keeper) SetHooks(eh types.EvmHooks) *Keeper {
-	if k.hooks != nil {
-		panic("cannot set evm hooks twice")
-	}
-
-	k.hooks = eh
-	return k
-}
-
-// CleanHooks resets the hooks for the EVM module
-// NOTE: Should only be used for testing purposes
-func (k *Keeper) CleanHooks() *Keeper {
-	k.hooks = nil
-	return k
-}
-
-// PostTxProcessing delegate the call to the hooks. If no hook has been registered, this function returns with a `nil` error
-func (k *Keeper) PostTxProcessing(ctx sdk.Context, msg core.Message, receipt *ethtypes.Receipt) error {
-	if k.hooks == nil {
-		return nil
-	}
-	return k.hooks.PostTxProcessing(ctx, msg, receipt)
 }

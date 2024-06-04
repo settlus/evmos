@@ -29,6 +29,11 @@ var _ types.MsgServer = Keeper{}
 func (k Keeper) Transfer(goCtx context.Context, msg *types.MsgTransfer) (*types.MsgTransferResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
+	if !k.erc20Keeper.IsERC20Enabled(ctx) {
+		// no-op: continue with regular transfer
+		return k.Keeper.Transfer(sdk.WrapSDKContext(ctx), msg)
+	}
+
 	// use a zero gas config to avoid extra costs for the relayers
 	kvGasCfg := ctx.KVGasConfig()
 	transientKVGasCfg := ctx.TransientKVGasConfig()
@@ -62,11 +67,6 @@ func (k Keeper) Transfer(goCtx context.Context, msg *types.MsgTransfer) (*types.
 
 	sender := sdk.MustAccAddressFromBech32(msg.Sender)
 
-	if !k.erc20Keeper.IsERC20Enabled(ctx) {
-		// no-op: continue with regular transfer
-		return k.Keeper.Transfer(sdk.WrapSDKContext(ctx), msg)
-	}
-
 	// update the msg denom to the token pair denom
 	msg.Token.Denom = pair.Denom
 
@@ -87,19 +87,21 @@ func (k Keeper) Transfer(goCtx context.Context, msg *types.MsgTransfer) (*types.
 		return k.Keeper.Transfer(sdk.WrapSDKContext(ctx), msg)
 	}
 
-	// only convert the remaining difference
-	difference := msg.Token.Amount.Sub(balance.Amount)
+	if pair.IsNativeERC20() {
+		// only convert the remaining difference
+		difference := msg.Token.Amount.Sub(balance.Amount)
 
-	msgConvertERC20 := erc20types.NewMsgConvertERC20(
-		difference,
-		sender,
-		pair.GetERC20Contract(),
-		common.BytesToAddress(sender.Bytes()),
-	)
+		msgConvertERC20 := erc20types.NewMsgConvertERC20(
+			difference,
+			sender,
+			pair.GetERC20Contract(),
+			common.BytesToAddress(sender.Bytes()),
+		)
 
-	// Use MsgConvertERC20 to convert the ERC20 to a Cosmos IBC Coin
-	if _, err := k.erc20Keeper.ConvertERC20(sdk.WrapSDKContext(ctx), msgConvertERC20); err != nil {
-		return nil, err
+		// Use MsgConvertERC20 to convert the ERC20 to a Cosmos IBC Coin
+		if _, err := k.erc20Keeper.ConvertERC20(sdk.WrapSDKContext(ctx), msgConvertERC20); err != nil {
+			return nil, err
+		}
 	}
 
 	defer func() {
