@@ -16,7 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/evmos/evmos/v18/precompiles/authorization"
 	cmn "github.com/evmos/evmos/v18/precompiles/common"
-	stakingkeeper "github.com/evmos/evmos/v18/x/staking/keeper"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 )
 
 var _ vm.PrecompiledContract = &Precompile{}

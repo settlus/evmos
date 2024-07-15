@@ -32,7 +32,7 @@ import (
 	vestingprecompile "github.com/evmos/evmos/v18/precompiles/vesting"
 	erc20Keeper "github.com/evmos/evmos/v18/x/erc20/keeper"
 	transferkeeper "github.com/evmos/evmos/v18/x/ibc/transfer/keeper"
-	stakingkeeper "github.com/evmos/evmos/v18/x/staking/keeper"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	vestingkeeper "github.com/evmos/evmos/v18/x/vesting/keeper"
 )
 

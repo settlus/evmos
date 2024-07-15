@@ -40,7 +40,7 @@ import (
 	"github.com/evmos/evmos/v18/x/evm/statedb"
 	evmtypes "github.com/evmos/evmos/v18/x/evm/types"
 	inflationtypes "github.com/evmos/evmos/v18/x/inflation/v1/types"
-	stakingkeeper "github.com/evmos/evmos/v18/x/staking/keeper"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	vestingtypes "github.com/evmos/evmos/v18/x/vesting/types"
 	"golang.org/x/exp/slices"
 )
