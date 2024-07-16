@@ -15,6 +15,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
+
 	cmn "github.com/evmos/evmos/v18/precompiles/common"
 	"github.com/evmos/evmos/v18/precompiles/distribution"
 	"github.com/evmos/evmos/v18/precompiles/testutil"
@@ -204,7 +205,7 @@ var _ = Describe("Calling distribution precompile from EOA", func() {
 			// create a validator with s.address and s.privKey because this account is
 			// used for signing txs
 			stakeAmt = math.NewInt(100)
-			testutil.CreateValidator(s.ctx, s.T(), s.privKey.PubKey(), *s.app.StakingKeeper.Keeper, stakeAmt)
+			testutil.CreateValidator(s.ctx, s.T(), s.privKey.PubKey(), s.app.StakingKeeper, stakeAmt)
 
 			// set some validator commission
 			valAddr = s.address.Bytes()
@@ -793,7 +794,7 @@ var _ = Describe("Calling distribution precompile from another contract", func()
 			// used for signing txs
 			valAddr = s.address.Bytes()
 			stakeAmt := math.NewInt(100)
-			testutil.CreateValidator(s.ctx, s.T(), s.privKey.PubKey(), *s.app.StakingKeeper.Keeper, stakeAmt)
+			testutil.CreateValidator(s.ctx, s.T(), s.privKey.PubKey(), s.app.StakingKeeper, stakeAmt)
 
 			// set some commissions to validators
 			var valAddresses []sdk.ValAddress

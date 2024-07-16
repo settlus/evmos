@@ -4,6 +4,7 @@ import (
 	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
 	v14 "github.com/evmos/evmos/v18/app/upgrades/v14"
 	"github.com/evmos/evmos/v18/testutil"
 	testutiltx "github.com/evmos/evmos/v18/testutil/tx"
@@ -136,11 +137,11 @@ func (s *UpgradesTestSuite) TestUpdateMigrateNativeMultisigs() {
 	expectedSharesMap[s.validators[0].OperatorAddress] = expectedSharesMap[s.validators[0].OperatorAddress].Sub(delegateShares)
 
 	// Migrate strategic reserves
-	err = v14.MigrateNativeMultisigs(s.ctx, s.app.BankKeeper, *s.app.StakingKeeper.Keeper, newStrategicReserve.Addr, oldStrategicReservesAddrs...)
+	err = v14.MigrateNativeMultisigs(s.ctx, s.app.BankKeeper, s.app.StakingKeeper, newStrategicReserve.Addr, oldStrategicReservesAddrs...)
 	s.Require().NoError(err, "failed to migrate strategic reserves")
 
 	// Migrate premint wallet
-	err = v14.MigrateNativeMultisigs(s.ctx, s.app.BankKeeper, *s.app.StakingKeeper.Keeper, newPremintWallet.Addr, oldPremintWallet.Addr.String())
+	err = v14.MigrateNativeMultisigs(s.ctx, s.app.BankKeeper, s.app.StakingKeeper, newPremintWallet.Addr, oldPremintWallet.Addr.String())
 	s.Require().NoError(err, "failed to migrate premint wallet")
 
 	// Check that the multisigs have been updated
@@ -162,7 +163,7 @@ func (s *UpgradesTestSuite) TestInstantUnbonding() {
 	delegation, found := s.app.StakingKeeper.GetDelegation(s.ctx, s.address.Bytes(), s.validators[0].GetOperator())
 	s.Require().True(found, "delegation not found")
 
-	unbondAmount, err := v14.InstantUnbonding(s.ctx, s.app.BankKeeper, *s.app.StakingKeeper.Keeper, delegation, s.bondDenom)
+	unbondAmount, err := v14.InstantUnbonding(s.ctx, s.app.BankKeeper, s.app.StakingKeeper, delegation, s.bondDenom)
 	s.Require().NoError(err, "failed to unbond")
 	s.Require().Equal(unbondAmount, math.NewInt(1e18), "expected different unbond amount")
 

@@ -146,7 +146,7 @@ func (suite *KeeperTestSuite) SetupTest() error {
 	if err != nil {
 		return err
 	}
-	validator = stakingkeeper.TestingUpdateValidator(suite.app.StakingKeeper.Keeper, suite.ctx, validator, true)
+	validator = stakingkeeper.TestingUpdateValidator(&suite.app.StakingKeeper, suite.ctx, validator, true)
 	err = suite.app.StakingKeeper.Hooks().AfterValidatorCreated(suite.ctx, validator.GetOperator())
 	if err != nil {
 		return err

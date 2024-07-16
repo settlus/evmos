@@ -12,13 +12,14 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	ibctypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/evmos/evmos/v18/app"
 	v11 "github.com/evmos/evmos/v18/app/upgrades/v11"
 	"github.com/evmos/evmos/v18/crypto/ethsecp256k1"
 	"github.com/evmos/evmos/v18/testutil"
 	utiltx "github.com/evmos/evmos/v18/testutil/tx"
 	feemarkettypes "github.com/evmos/evmos/v18/x/feemarket/types"
-	"github.com/stretchr/testify/suite"
 
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
@@ -26,6 +27,7 @@ import (
 	"github.com/cometbft/cometbft/version"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
 	"github.com/evmos/evmos/v18/utils"
 )
 
@@ -107,7 +109,7 @@ func (suite *UpgradeTestSuite) setValidators(validatorsAddr []string) {
 		validator, err := stakingtypes.NewValidator(valAddr, suite.consKey, stakingtypes.Description{})
 		suite.Require().NoError(err)
 
-		validator = stakingkeeper.TestingUpdateValidator(suite.app.StakingKeeper.Keeper, suite.ctx, validator, true)
+		validator = stakingkeeper.TestingUpdateValidator(&suite.app.StakingKeeper, suite.ctx, validator, true)
 
 		err = suite.app.StakingKeeper.Hooks().AfterValidatorCreated(suite.ctx, validator.GetOperator())
 		suite.Require().NoError(err)
@@ -253,7 +255,7 @@ func (suite *UpgradeTestSuite) TestDistributeRewards() {
 			suite.Require().Equal(math.ZeroInt(), initialDel)
 
 			if utils.IsMainnet(tc.chainID) {
-				v11.HandleRewardDistribution(suite.ctx, suite.app.Logger(), suite.app.BankKeeper, *suite.app.StakingKeeper.Keeper, suite.app.DistrKeeper)
+				v11.HandleRewardDistribution(suite.ctx, suite.app.Logger(), suite.app.BankKeeper, suite.app.StakingKeeper, suite.app.DistrKeeper)
 			}
 
 			// account not in list should NOT get rewards
