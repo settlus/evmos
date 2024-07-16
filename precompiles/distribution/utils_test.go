@@ -20,6 +20,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+
 	evmosapp "github.com/evmos/evmos/v18/app"
 	cmn "github.com/evmos/evmos/v18/precompiles/common"
 	"github.com/evmos/evmos/v18/precompiles/distribution"
@@ -243,7 +244,7 @@ func (s *PrecompileTestSuite) prepareStakingRewards(stkRs ...stakingRewards) {
 		s.Require().NoError(err)
 
 		// end block to bond validator and increase block height
-		sdkstaking.EndBlocker(s.ctx, s.app.StakingKeeper.Keeper)
+		sdkstaking.EndBlocker(s.ctx, &s.app.StakingKeeper)
 		// allocate rewards to validator (of these 50% will be paid out to the delegator)
 		allocatedRewards := sdk.NewDecCoins(sdk.NewDecCoin(s.bondDenom, r.RewardAmt.Mul(math.NewInt(2))))
 		s.app.DistrKeeper.AllocateTokensToValidator(s.ctx, r.Validator, allocatedRewards)

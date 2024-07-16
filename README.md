@@ -1,3 +1,12 @@
+# EVMOS fork for Settlus
+
+- removed `precompiles/staking`
+- removed `x/staking`
+- replace cosmos-sdk with `github.com/settlus/cosmos-sdk`
+
+---
+
+
 <!--
 parent:
   order: false

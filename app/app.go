@@ -88,7 +88,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	sdkstaking "github.com/cosmos/cosmos-sdk/x/staking"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
@@ -120,6 +119,9 @@ import (
 
 	// unnamed import of statik for swagger UI support
 	_ "github.com/evmos/evmos/v18/client/docs/statik"
+
+	"github.com/cosmos/cosmos-sdk/x/staking"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 
 	"github.com/evmos/evmos/v18/app/ante"
 	ethante "github.com/evmos/evmos/v18/app/ante/evm"
@@ -158,14 +160,12 @@ import (
 	feemarketkeeper "github.com/evmos/evmos/v18/x/feemarket/keeper"
 	feemarkettypes "github.com/evmos/evmos/v18/x/feemarket/types"
 	"github.com/evmos/evmos/v18/x/incentives"
-	inflation "github.com/evmos/evmos/v18/x/inflation/v1"
+	"github.com/evmos/evmos/v18/x/inflation/v1"
 	inflationkeeper "github.com/evmos/evmos/v18/x/inflation/v1/keeper"
 	inflationtypes "github.com/evmos/evmos/v18/x/inflation/v1/types"
-	revenue "github.com/evmos/evmos/v18/x/revenue/v1"
+	"github.com/evmos/evmos/v18/x/revenue/v1"
 	revenuekeeper "github.com/evmos/evmos/v18/x/revenue/v1/keeper"
 	revenuetypes "github.com/evmos/evmos/v18/x/revenue/v1/types"
-	"github.com/evmos/evmos/v18/x/staking"
-	stakingkeeper "github.com/evmos/evmos/v18/x/staking/keeper"
 	"github.com/evmos/evmos/v18/x/vesting"
 	vestingclient "github.com/evmos/evmos/v18/x/vesting/client"
 	vestingkeeper "github.com/evmos/evmos/v18/x/vesting/keeper"
@@ -214,7 +214,7 @@ var (
 		genutil.NewAppModuleBasic(genutiltypes.DefaultMessageValidator),
 		bank.AppModuleBasic{},
 		capability.AppModuleBasic{},
-		staking.AppModuleBasic{AppModuleBasic: &sdkstaking.AppModuleBasic{}},
+		staking.AppModuleBasic{},
 		distr.AppModuleBasic{},
 		gov.NewAppModuleBasic(
 			[]govclient.ProposalHandler{
@@ -648,12 +648,12 @@ func NewEvmos(
 		evm.NewAppModule(app.EvmKeeper, app.AccountKeeper, app.GetSubspace(evmtypes.ModuleName)),
 		feemarket.NewAppModule(app.FeeMarketKeeper, app.GetSubspace(feemarkettypes.ModuleName)),
 		// Evmos app modules
-		inflation.NewAppModule(app.InflationKeeper, app.AccountKeeper, *app.StakingKeeper.Keeper,
+		inflation.NewAppModule(app.InflationKeeper, app.AccountKeeper, app.StakingKeeper,
 			app.GetSubspace(inflationtypes.ModuleName)),
 		erc20.NewAppModule(app.Erc20Keeper, app.AccountKeeper,
 			app.GetSubspace(erc20types.ModuleName)),
 		epochs.NewAppModule(appCodec, app.EpochsKeeper),
-		vesting.NewAppModule(app.VestingKeeper, app.AccountKeeper, app.BankKeeper, *app.StakingKeeper.Keeper),
+		vesting.NewAppModule(app.VestingKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper),
 		revenue.NewAppModule(app.RevenueKeeper, app.AccountKeeper,
 			app.GetSubspace(revenuetypes.ModuleName)),
 	)
@@ -1197,7 +1197,7 @@ func (app *Evmos) setupUpgradeHandlers() {
 		v10.UpgradeName,
 		v10.CreateUpgradeHandler(
 			app.mm, app.configurator,
-			*app.StakingKeeper.Keeper,
+			app.StakingKeeper,
 		),
 	)
 
@@ -1208,7 +1208,7 @@ func (app *Evmos) setupUpgradeHandlers() {
 			app.mm, app.configurator,
 			app.AccountKeeper,
 			app.BankKeeper,
-			*app.StakingKeeper.Keeper,
+			app.StakingKeeper,
 			app.DistrKeeper,
 		),
 	)
@@ -1254,7 +1254,7 @@ func (app *Evmos) setupUpgradeHandlers() {
 			app.mm, app.configurator,
 			app.BankKeeper,
 			app.EvmKeeper,
-			*app.StakingKeeper.Keeper,
+			app.StakingKeeper,
 		),
 	)
 
