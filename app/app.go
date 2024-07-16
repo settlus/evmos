@@ -121,6 +121,8 @@ import (
 	// unnamed import of statik for swagger UI support
 	_ "github.com/evmos/evmos/v18/client/docs/statik"
 
+	"github.com/cosmos/cosmos-sdk/x/staking"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	"github.com/evmos/evmos/v18/app/ante"
 	ethante "github.com/evmos/evmos/v18/app/ante/evm"
 	"github.com/evmos/evmos/v18/app/post"
@@ -164,8 +166,6 @@ import (
 	revenue "github.com/evmos/evmos/v18/x/revenue/v1"
 	revenuekeeper "github.com/evmos/evmos/v18/x/revenue/v1/keeper"
 	revenuetypes "github.com/evmos/evmos/v18/x/revenue/v1/types"
-	"github.com/cosmos/cosmos-sdk/x/staking"
-	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	"github.com/evmos/evmos/v18/x/vesting"
 	vestingclient "github.com/evmos/evmos/v18/x/vesting/client"
 	vestingkeeper "github.com/evmos/evmos/v18/x/vesting/keeper"
