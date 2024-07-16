@@ -20,7 +20,9 @@ import (
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	distributionkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	channelkeeper "github.com/cosmos/ibc-go/v7/modules/core/04-channel/keeper"
+
 	bankprecompile "github.com/evmos/evmos/v18/precompiles/bank"
 	distprecompile "github.com/evmos/evmos/v18/precompiles/distribution"
 	erc20precompile "github.com/evmos/evmos/v18/precompiles/erc20"
@@ -28,11 +30,9 @@ import (
 	osmosisoutpost "github.com/evmos/evmos/v18/precompiles/outposts/osmosis"
 	strideoutpost "github.com/evmos/evmos/v18/precompiles/outposts/stride"
 	"github.com/evmos/evmos/v18/precompiles/p256"
-	stakingprecompile "github.com/evmos/evmos/v18/precompiles/staking"
 	vestingprecompile "github.com/evmos/evmos/v18/precompiles/vesting"
 	erc20Keeper "github.com/evmos/evmos/v18/x/erc20/keeper"
 	transferkeeper "github.com/evmos/evmos/v18/x/ibc/transfer/keeper"
-	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	vestingkeeper "github.com/evmos/evmos/v18/x/vesting/keeper"
 )
 
@@ -58,11 +58,6 @@ func AvailablePrecompiles(
 	bech32Precompile, err := bech32.NewPrecompile(6000)
 	if err != nil {
 		panic(fmt.Errorf("failed to instantiate bech32 precompile: %w", err))
-	}
-
-	stakingPrecompile, err := stakingprecompile.NewPrecompile(stakingKeeper, authzKeeper)
-	if err != nil {
-		panic(fmt.Errorf("failed to instantiate staking precompile: %w", err))
 	}
 
 	distributionPrecompile, err := distprecompile.NewPrecompile(distributionKeeper, stakingKeeper, authzKeeper)
@@ -121,7 +116,6 @@ func AvailablePrecompiles(
 	precompiles[p256Precompile.Address()] = p256Precompile
 
 	// Stateful precompiles
-	precompiles[stakingPrecompile.Address()] = stakingPrecompile
 	precompiles[distributionPrecompile.Address()] = distributionPrecompile
 	precompiles[vestingPrecompile.Address()] = vestingPrecompile
 	precompiles[ibcTransferPrecompile.Address()] = ibcTransferPrecompile
