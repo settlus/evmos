@@ -130,7 +130,6 @@ import (
 	v11 "github.com/evmos/evmos/v18/app/upgrades/v11"
 	v12 "github.com/evmos/evmos/v18/app/upgrades/v12"
 	v13 "github.com/evmos/evmos/v18/app/upgrades/v13"
-	v14 "github.com/evmos/evmos/v18/app/upgrades/v14"
 	v15 "github.com/evmos/evmos/v18/app/upgrades/v15"
 	v16 "github.com/evmos/evmos/v18/app/upgrades/v16"
 	v17 "github.com/evmos/evmos/v18/app/upgrades/v17"
@@ -531,7 +530,6 @@ func NewEvmos(
 			app.DistrKeeper,
 			app.BankKeeper,
 			app.Erc20Keeper,
-			app.VestingKeeper,
 			app.AuthzKeeper,
 			app.TransferKeeper,
 			app.IBCKeeper.ChannelKeeper,
@@ -1231,22 +1229,6 @@ func (app *Evmos) setupUpgradeHandlers() {
 		),
 	)
 
-	// !! ATTENTION !!
-	// v14 upgrade handler
-	// !! WHEN UPGRADING TO SDK v0.47 MAKE SURE TO INCLUDE THIS
-	// source: https://github.com/cosmos/cosmos-sdk/blob/release/v0.47.x/UPGRADING.md#xconsensus
-	app.UpgradeKeeper.SetUpgradeHandler(
-		v14.UpgradeName,
-		v14.CreateUpgradeHandler(
-			app.mm, app.configurator,
-			app.EvmKeeper,
-			app.ConsensusParamsKeeper,
-			app.IBCKeeper.ClientKeeper,
-			app.ParamsKeeper,
-			app.appCodec,
-		),
-	)
-
 	// v15 upgrade handler
 	app.UpgradeKeeper.SetUpgradeHandler(
 		v15.UpgradeName,
@@ -1339,16 +1321,6 @@ func (app *Evmos) setupUpgradeHandlers() {
 		// no store upgrades
 	case v13.UpgradeName:
 		// no store upgrades
-	case v14.UpgradeName:
-		// !! ATTENTION !!
-		// !! WHEN UPGRADING TO SDK v0.47 MAKE SURE TO INCLUDE THIS
-		// source: https://github.com/cosmos/cosmos-sdk/blob/release/v0.47.x/UPGRADING.md
-		storeUpgrades = &storetypes.StoreUpgrades{
-			Added: []string{
-				consensusparamtypes.StoreKey,
-				crisistypes.ModuleName,
-			},
-		}
 	case v15.UpgradeName:
 		// crisis module is deprecated in v15
 		storeUpgrades = &storetypes.StoreUpgrades{

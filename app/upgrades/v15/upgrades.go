@@ -9,7 +9,7 @@ import (
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	v14 "github.com/evmos/evmos/v18/app/upgrades/v14"
+
 	"github.com/evmos/evmos/v18/utils"
 	evmkeeper "github.com/evmos/evmos/v18/x/evm/keeper"
 )
@@ -27,13 +27,6 @@ func CreateUpgradeHandler(
 
 		if utils.IsMainnet(ctx.ChainID()) {
 			logger.Info("migrating strategic reserves")
-			if err := v14.MigrateNativeMultisigs(
-				ctx, bk, sk, v14.NewTeamStrategicReserveAcc, v14.OldStrategicReserves...,
-			); err != nil {
-				// NOTE: log error instead of aborting the upgrade
-				logger.Error("error while migrating native multisigs", "error", err)
-			}
-
 			// Add EIP contained in Shanghai hard fork to the extra EIPs
 			// in the EVM parameters. This enables using the PUSH0 opcode and
 			// thus supports Solidity v0.8.20.
