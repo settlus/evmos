@@ -30,10 +30,8 @@ import (
 	osmosisoutpost "github.com/evmos/evmos/v18/precompiles/outposts/osmosis"
 	strideoutpost "github.com/evmos/evmos/v18/precompiles/outposts/stride"
 	"github.com/evmos/evmos/v18/precompiles/p256"
-	vestingprecompile "github.com/evmos/evmos/v18/precompiles/vesting"
 	erc20Keeper "github.com/evmos/evmos/v18/x/erc20/keeper"
 	transferkeeper "github.com/evmos/evmos/v18/x/ibc/transfer/keeper"
-	vestingkeeper "github.com/evmos/evmos/v18/x/vesting/keeper"
 )
 
 // AvailablePrecompiles returns the list of all available precompiled contracts.
@@ -44,7 +42,6 @@ func AvailablePrecompiles(
 	distributionKeeper distributionkeeper.Keeper,
 	bankKeeper bankkeeper.Keeper,
 	erc20Keeper erc20Keeper.Keeper,
-	vestingKeeper vestingkeeper.Keeper,
 	authzKeeper authzkeeper.Keeper,
 	transferKeeper transferkeeper.Keeper,
 	channelKeeper channelkeeper.Keeper,
@@ -68,11 +65,6 @@ func AvailablePrecompiles(
 	ibcTransferPrecompile, err := ics20precompile.NewPrecompile(stakingKeeper, transferKeeper, channelKeeper, authzKeeper)
 	if err != nil {
 		panic(fmt.Errorf("failed to instantiate ICS20 precompile: %w", err))
-	}
-
-	vestingPrecompile, err := vestingprecompile.NewPrecompile(vestingKeeper, authzKeeper)
-	if err != nil {
-		panic(fmt.Errorf("failed to instantiate vesting precompile: %w", err))
 	}
 
 	bankPrecompile, err := bankprecompile.NewPrecompile(bankKeeper, erc20Keeper)
@@ -117,7 +109,6 @@ func AvailablePrecompiles(
 
 	// Stateful precompiles
 	precompiles[distributionPrecompile.Address()] = distributionPrecompile
-	precompiles[vestingPrecompile.Address()] = vestingPrecompile
 	precompiles[ibcTransferPrecompile.Address()] = ibcTransferPrecompile
 	precompiles[bankPrecompile.Address()] = bankPrecompile
 
