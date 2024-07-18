@@ -26,7 +26,13 @@ DOCKER_TAG := $(COMMIT_HASH)
 # e2e env
 MOUNT_PATH := $(shell pwd)/build/:/root/
 E2E_SKIP_CLEANUP := false
-ROCKSDB_VERSION ?= "8.5.3"
+ROCKSDB_VERSION ?= "9.2.1"
+# Deps
+DEPS_COSMOS_SDK_VERSION := $(shell cat go.sum | grep 'github.com/evmos/cosmos-sdk' | grep -v -e 'go.mod' | tail -n 1 | awk '{ print $$2; }')
+DEPS_IBC_GO_VERSION := $(shell cat go.sum | grep 'github.com/cosmos/ibc-go' | grep -v -e 'go.mod' | tail -n 1 | awk '{ print $$2; }')
+DEPS_COSMOS_PROTO := $(shell cat go.sum | grep 'github.com/cosmos/cosmos-proto' | grep -v -e 'go.mod' | tail -n 1 | awk '{ print $$2; }')
+DEPS_COSMOS_GOGOPROTO := $(shell cat go.sum | grep 'github.com/cosmos/gogoproto' | grep -v -e 'go.mod' | tail -n 1 | awk '{ print $$2; }')
+DEPS_COSMOS_ICS23 := go/$(shell cat go.sum | grep 'github.com/cosmos/ics23/go' | grep -v -e 'go.mod' | tail -n 1 | awk '{ print $$2; }')
 
 export GO111MODULE = on
 
@@ -157,7 +163,7 @@ build-reproducible: go.sum
 	$(DOCKER) cp -a latest-build:/home/builder/artifacts/ $(CURDIR)/
 
 
-build-docker:
+build-docker-goleveldb:
 	# TODO replace with kaniko
 	DOCKER_BUILDKIT=1 $(DOCKER) build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_ARGS} .
 	$(DOCKER) tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
@@ -170,10 +176,15 @@ build-docker:
 	echo 'docker run -it --rm -v $${SCRIPT_PATH}/.evmosd:/home/evmos/.evmosd $$IMAGE_NAME evmosd "$$@"' >> ./build/evmosd
 	chmod +x ./build/evmosd
 
-build-pebbledb:
-	@go mod edit -replace github.com/cometbft/cometbft-db=github.com/notional-labs/cometbft-db@pebble
-	@go mod tidy
-	COSMOS_BUILD_OPTIONS=pebbledb $(MAKE) build
+build-docker-pebbledb:
+	DOCKER_BUILDKIT=1 $(DOCKER) build --build-arg DB_BACKEND=pebbledb -t ${DOCKER_IMAGE}:${DOCKER_TAG}-pebble ${DOCKER_ARGS} .
+	$(DOCKER) tag ${DOCKER_IMAGE}:${DOCKER_TAG}-pebble ${DOCKER_IMAGE}:latest-pebble
+	mkdir -p ./build/.evmosd
+	echo '#!/usr/bin/env bash' > ./build/evmosd
+	echo "IMAGE_NAME=${DOCKER_IMAGE}:${COMMIT_HASH}" >> ./build/evmosd
+	echo 'SCRIPT_PATH=$$(cd $$(dirname $$0) && pwd -P)' >> ./build/evmosd
+	echo 'docker run -it --rm -v $${SCRIPT_PATH}/.evmosd:/home/evmos/.evmosd $$IMAGE_NAME evmosd "$$@"' >> ./build/evmosd
+	chmod +x ./build/evmosd
 
 build-rocksdb:
 	# Make sure to run this command with root permission
@@ -182,9 +193,11 @@ build-rocksdb:
 	CGO_LDFLAGS="-L/usr/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4 -lzstd -ldl" \
 	COSMOS_BUILD_OPTIONS=rocksdb $(MAKE) build
 
-push-docker: build-docker
-	$(DOCKER) push ${DOCKER_IMAGE}:${DOCKER_TAG}
-	$(DOCKER) push ${DOCKER_IMAGE}:latest
+push-docker: build-docker-goleveldb build-docker-pebbledb
+    $(DOCKER) push ${DOCKER_IMAGE}:${DOCKER_TAG}
+    $(DOCKER) push ${DOCKER_IMAGE}:latest
+    $(DOCKER) push ${DOCKER_IMAGE}:${DOCKER_TAG}-pebble
+    $(DOCKER) push ${DOCKER_IMAGE}:latest-pebble
 
 $(MOCKS_DIR):
 	mkdir -p $(MOCKS_DIR)
@@ -337,7 +350,7 @@ test-unit-cover: TEST_PACKAGES=$(PACKAGES_UNIT)
 test-e2e:
 	@if [ -z "$(TARGET_VERSION)" ]; then \
 		echo "Building docker image from local codebase"; \
-		make build-docker; \
+		make build-docker-pebbledb; \
 	fi
 	@mkdir -p ./build
 	@rm -rf build/.evmosd
@@ -362,6 +375,10 @@ test-rpc:
 
 test-rpc-pending:
 	./scripts/integration-test-all.sh -t "pending" -q 1 -z 1 -s 2 -m "pending" -r "true"
+
+test-scripts:
+	@echo "Running scripts tests"
+	@pytest -s -vv ./scripts
 
 test-solidity:
 	@echo "Beginning solidity tests..."
@@ -407,6 +424,15 @@ format:
 
 .PHONY: format
 
+
+format-python: format-isort format-black
+
+format-black:
+	find . -name '*.py' -type f -not -path "*/node_modules/*" | xargs black
+
+format-isort:
+	find . -name '*.py' -type f -not -path "*/node_modules/*" | xargs isort
+
 ###############################################################################
 ###                                Protobuf                                 ###
 ###############################################################################
@@ -415,11 +441,15 @@ protoVer=0.11.6
 protoImageName=ghcr.io/cosmos/proto-builder:$(protoVer)
 protoImage=$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace --user 0 $(protoImageName)
 
+protoLintVer=0.44.0
+protoLinterImage=yoheimuta/protolint
+protoLinter=$(DOCKER) run --rm -v "$(CURDIR):/workspace" --workdir /workspace --user 0 $(protoLinterImage):$(protoLintVer)
+
 # ------
 # NOTE: If you are experiencing problems running these commands, try deleting
 #       the docker images and execute the desired command again.
 #
-proto-all: proto-format proto-lint proto-gen
+proto-all: proto-format proto-lint proto-gen proto-swagger-gen
 
 proto-gen:
 	@echo "Generating Protobuf files"
@@ -438,6 +468,7 @@ proto-format:
 proto-lint:
 	@echo "Linting Protobuf files"
 	@$(protoImage) buf lint --error-format=json	
+	@$(protoLinter) lint ./proto
 
 proto-check-breaking:
 	@echo "Checking Protobuf files for breaking changes"
@@ -450,10 +481,10 @@ proto-download-deps:
 	mkdir -p "$(THIRD_PARTY_DIR)/cosmos_tmp" && \
 	cd "$(THIRD_PARTY_DIR)/cosmos_tmp" && \
 	git init && \
-	git remote add origin "https://github.com/cosmos/cosmos-sdk.git" && \
+	git remote add origin "https://github.com/evmos/cosmos-sdk.git" && \
 	git config core.sparseCheckout true && \
 	printf "proto\nthird_party\n" > .git/info/sparse-checkout && \
-	git pull origin main && \
+	git pull origin "$(DEPS_COSMOS_SDK_VERSION)" && \
 	rm -f ./proto/buf.* && \
 	mv ./proto/* ..
 	rm -rf "$(THIRD_PARTY_DIR)/cosmos_tmp"
@@ -464,7 +495,7 @@ proto-download-deps:
 	git remote add origin "https://github.com/cosmos/ibc-go.git" && \
 	git config core.sparseCheckout true && \
 	printf "proto\n" > .git/info/sparse-checkout && \
-	git pull origin main && \
+	git pull origin "$(DEPS_IBC_GO_VERSION)" && \
 	rm -f ./proto/buf.* && \
 	mv ./proto/* ..
 	rm -rf "$(THIRD_PARTY_DIR)/ibc_tmp"
@@ -475,73 +506,30 @@ proto-download-deps:
 	git remote add origin "https://github.com/cosmos/cosmos-proto.git" && \
 	git config core.sparseCheckout true && \
 	printf "proto\n" > .git/info/sparse-checkout && \
-	git pull origin main && \
+	git pull origin "$(DEPS_COSMOS_PROTO_VERSION)" && \
 	rm -f ./proto/buf.* && \
 	mv ./proto/* ..
 	rm -rf "$(THIRD_PARTY_DIR)/cosmos_proto_tmp"
 
 	mkdir -p "$(THIRD_PARTY_DIR)/gogoproto" && \
-	curl -SSL https://raw.githubusercontent.com/cosmos/gogoproto/main/gogoproto/gogo.proto > "$(THIRD_PARTY_DIR)/gogoproto/gogo.proto"
+	curl -SSL "https://raw.githubusercontent.com/cosmos/gogoproto/$(DEPS_COSMOS_GOGOPROTO)/gogoproto/gogo.proto" > "$(THIRD_PARTY_DIR)/gogoproto/gogo.proto"
 
 	mkdir -p "$(THIRD_PARTY_DIR)/google/api" && \
 	curl -sSL https://raw.githubusercontent.com/googleapis/googleapis/master/google/api/annotations.proto > "$(THIRD_PARTY_DIR)/google/api/annotations.proto"
 	curl -sSL https://raw.githubusercontent.com/googleapis/googleapis/master/google/api/http.proto > "$(THIRD_PARTY_DIR)/google/api/http.proto"
 
 	mkdir -p "$(THIRD_PARTY_DIR)/cosmos/ics23/v1" && \
-	curl -sSL https://raw.githubusercontent.com/cosmos/ics23/master/proto/cosmos/ics23/v1/proofs.proto > "$(THIRD_PARTY_DIR)/cosmos/ics23/v1/proofs.proto"
+	curl -sSL "https://raw.githubusercontent.com/cosmos/ics23/$(DEPS_COSMOS_ICS23)/proto/cosmos/ics23/v1/proofs.proto" > "$(THIRD_PARTY_DIR)/cosmos/ics23/v1/proofs.proto"
 
 
 .PHONY: proto-all proto-gen proto-format proto-lint proto-check-breaking proto-swagger-gen
-
-###############################################################################
-###                                Localnet                                 ###
-###############################################################################
-
-# Build image for a local testnet
-localnet-build:
-	@$(MAKE) -C networks/local
-
-# Start a 4-node testnet locally
-localnet-start: localnet-stop localnet-build
-	@if ! [ -f build/node0/$(EVMOS_BINARY)/config/genesis.json ]; then docker run --rm -v $(CURDIR)/build:/evmos:Z evmos/node "./evmosd testnet init-files --v 4 -o /evmos --keyring-backend=test --starting-ip-address 192.167.10.2"; fi
-	docker-compose up -d
-
-# Stop testnet
-localnet-stop:
-	docker-compose down
-
-# Clean testnet
-localnet-clean:
-	docker-compose down
-	sudo rm -rf build/*
-
- # Reset testnet
-localnet-unsafe-reset:
-	docker-compose down
-ifeq ($(OS),Windows_NT)
-	@docker run --rm -v $(CURDIR)\build\node0\evmosd:/evmos\Z evmos/node "./evmosd tendermint unsafe-reset-all --home=/evmos"
-	@docker run --rm -v $(CURDIR)\build\node1\evmosd:/evmos\Z evmos/node "./evmosd tendermint unsafe-reset-all --home=/evmos"
-	@docker run --rm -v $(CURDIR)\build\node2\evmosd:/evmos\Z evmos/node "./evmosd tendermint unsafe-reset-all --home=/evmos"
-	@docker run --rm -v $(CURDIR)\build\node3\evmosd:/evmos\Z evmos/node "./evmosd tendermint unsafe-reset-all --home=/evmos"
-else
-	@docker run --rm -v $(CURDIR)/build/node0/evmosd:/evmos:Z evmos/node "./evmosd tendermint unsafe-reset-all --home=/evmos"
-	@docker run --rm -v $(CURDIR)/build/node1/evmosd:/evmos:Z evmos/node "./evmosd tendermint unsafe-reset-all --home=/evmos"
-	@docker run --rm -v $(CURDIR)/build/node2/evmosd:/evmos:Z evmos/node "./evmosd tendermint unsafe-reset-all --home=/evmos"
-	@docker run --rm -v $(CURDIR)/build/node3/evmosd:/evmos:Z evmos/node "./evmosd tendermint unsafe-reset-all --home=/evmos"
-endif
-
-# Clean testnet
-localnet-show-logstream:
-	docker-compose logs --tail=1000 -f
-
-.PHONY: localnet-build localnet-start localnet-stop
 
 ###############################################################################
 ###                                Releasing                                ###
 ###############################################################################
 
 PACKAGE_NAME:=github.com/evmos/evmos
-GOLANG_CROSS_VERSION  = v1.20
+GOLANG_CROSS_VERSION  = v1.22
 GOPATH ?= '$(HOME)/go'
 release-dry-run:
 	docker run \
@@ -577,61 +565,37 @@ release:
 ###                        Compile Solidity Contracts                       ###
 ###############################################################################
 
-CONTRACTS_DIR := contracts
-COMPILED_DIR := $(CONTRACTS_DIR)/compiled_contracts
-TMP := tmp
-TMP_CONTRACTS := $(TMP)/contracts
-TMP_COMPILED := $(TMP)/compiled.json
-TMP_JSON := $(TMP)/tmp.json
+# Install the necessary dependencies, compile the solidity contracts found in the
+# Evmos repository and then clean up the contracts data.
+contracts-all: contracts-compile contracts-clean
 
-# Compile and format solidity contracts for the erc20 module. Also install
-# openzeppeling as the contracts are build on top of openzeppelin templates.
-contracts-compile: contracts-clean openzeppelin create-contracts-json
-
-# Install openzeppelin solidity contracts
-openzeppelin:
-	@echo "Importing openzeppelin contracts..."
-	@cd $(CONTRACTS_DIR) && \
-	 npm install && \
-	 mv node_modules $(TMP) && \
-	 mv $(TMP)/@openzeppelin . && \
-	 rm -rf $(TMP)
-
-# Clean tmp files
+# Clean smart contract compilation artifacts, dependencies and cache files
 contracts-clean:
-	@rm -rf $(CONTRACTS_DIR)/$(TMP)
-	@rm -rf $(CONTRACTS_DIR)/node_modules
-	@rm -rf $(COMPILED_DIR)
-	@rm -rf $(CONTRACTS_DIR)/@openzeppelin
+	@echo "Cleaning up the contracts directory..."
+	@python3 ./scripts/compile_smart_contracts/compile_smart_contracts.py --clean
 
-# Compile, filter out and format contracts into the following format.
-# {
-# 	"abi": "[{\"inpu 			# JSON string
-# 	"bin": "60806040
-# 	"contractName": 			# filename without .sol
-# }
-create-contracts-json:
-	@for c in $(shell ls $(CONTRACTS_DIR) | grep '\.sol' | sed 's/.sol//g'); do \
-		command -v jq > /dev/null 2>&1 || { echo >&2 "jq not installed."; exit 1; } ;\
-		command -v solc > /dev/null 2>&1 || { echo >&2 "solc not installed."; exit 1; } ;\
-		mkdir -p $(COMPILED_DIR) ;\
-		mkdir -p $(TMP) ;\
-		echo "\nCompiling solidity contract $${c}..." ;\
-		solc --combined-json abi,bin $(CONTRACTS_DIR)/$${c}.sol > $(TMP_COMPILED) ;\
-		echo "Formatting JSON..." ;\
-		get_contract=$$(jq '.contracts["$(CONTRACTS_DIR)/'$$c'.sol:'$$c'"]' $(TMP_COMPILED)) ;\
-		add_contract_name=$$(echo $$get_contract | jq '. + { "contractName": "'$$c'" }') ;\
-		echo $$add_contract_name | jq > $(TMP_JSON) ;\
-		abi_string=$$(echo $$add_contract_name | jq -cr '.abi') ;\
-		echo $$add_contract_name | jq --arg newval "$$abi_string" '.abi = $$newval' > $(TMP_JSON) ;\
-		mv $(TMP_JSON) $(COMPILED_DIR)/$${c}.json ;\
-	done
-	@rm -rf $(TMP)
+# Compile the solidity contracts found in the Evmos repository.
+contracts-compile:
+	@echo "Compiling smart contracts..."
+	@python3 ./scripts/compile_smart_contracts/compile_smart_contracts.py --compile
+
+# Add a new solidity contract to be compiled
+contracts-add:
+	@echo "Adding a new smart contract to be compiled..."
+	@python3 ./scripts/compile_smart_contracts/compile_smart_contracts.py --add $(CONTRACT)
 
 ###############################################################################
-###                                Licenses                                 ###
+###                           Miscellaneous Checks                          ###
 ###############################################################################
 
 check-licenses:
 	@echo "Checking licenses..."
-	@python3 scripts/check_licenses.py .
+	@python3 scripts/license_checker/check_licenses.py .
+
+check-changelog:
+	@echo "Checking changelog..."
+	@python3 scripts/changelog_checker/check_changelog.py ./CHANGELOG.md
+
+fix-changelog:
+	@echo "Fixing changelog..."
+	@python3 scripts/changelog_checker/check_changelog.py ./CHANGELOG.md --fix
