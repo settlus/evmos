@@ -52,6 +52,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
 	"github.com/evmos/evmos/v18/app"
 	"github.com/evmos/evmos/v18/crypto/hd"
 
@@ -434,6 +435,8 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			stakingtypes.NewDescription(nodeDirName, "", "", "", ""),
 			stakingtypes.NewCommissionRates(commission, math.LegacyOneDec(), math.LegacyOneDec()),
 			math.OneInt(),
+			math.ZeroInt(),
+			sdk.ZeroDec(),
 		)
 		if err != nil {
 			return nil, err
