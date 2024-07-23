@@ -53,8 +53,8 @@ func TestParamsValidate(t *testing.T) {
 			params: Params{
 				EvmDenom: DefaultEVMDenom,
 				ActivePrecompiles: []string{
+					"0x0000000000000000000000000000000000000802",
 					"0x0000000000000000000000000000000000000801",
-					"0x0000000000000000000000000000000000000800",
 				},
 			},
 			errContains: "precompiles need to be sorted",
@@ -167,7 +167,7 @@ func TestIsLondon(t *testing.T) {
 func TestIsActivePrecompile(t *testing.T) {
 	t.Parallel()
 
-	precompileAddr := "0x0000000000000000000000000000000000000800"
+	precompileAddr := "0x0000000000000000000000000000000000000801"
 
 	testCases := []struct {
 		name      string

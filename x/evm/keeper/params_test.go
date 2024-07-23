@@ -99,16 +99,16 @@ func (suite *KeeperTestSuite) TestParams() {
 			name: "success - Active precompiles are sorted when setting params",
 			paramsFun: func() interface{} {
 				params.ActivePrecompiles = []string{
+					"0x0000000000000000000000000000000000000802",
 					"0x0000000000000000000000000000000000000801",
-					"0x0000000000000000000000000000000000000800",
 				}
 				err := suite.app.EvmKeeper.SetParams(suite.ctx, params)
 				suite.Require().NoError(err, "expected no error when setting params")
 
 				// NOTE: return sorted slice here because the precompiles should be sorted when setting the params
 				return []string{
-					"0x0000000000000000000000000000000000000800",
 					"0x0000000000000000000000000000000000000801",
+					"0x0000000000000000000000000000000000000802",
 				}
 			},
 			getFun: func() interface{} {
