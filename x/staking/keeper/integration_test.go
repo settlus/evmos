@@ -322,6 +322,8 @@ var _ = Describe("Staking module tests", func() {
 					types.NewDescription("T", "E", "S", "T", "Z"),
 					commissions,
 					sdk.OneInt(),
+					sdk.ZeroInt(),
+					sdk.ZeroDec(),
 				)
 				Expect(err).To(BeNil())
 			})
