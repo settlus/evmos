@@ -3,8 +3,6 @@
 package v6
 
 import (
-	"fmt"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -53,21 +51,8 @@ func MigrateStore(
 		CancunBlock:         paramsV5.ChainConfig.CancunBlock,
 	}
 	params.AllowUnprotectedTxs = paramsV5.AllowUnprotectedTxs
-	params.EVMChannels = types.DefaultEVMChannels
-
-	// set the default access control configuration
-	params.AccessControl = types.DefaultAccessControl
 	params.ActiveStaticPrecompiles = paramsV5.ActivePrecompiles
-
-	// Migrate old ExtraEIPs from int64 to string. Since no Evmos EIPs have been
-	// created before and activators contains only `ethereum_XXXX` activations,
-	// all values will be prefixed with `ethereum_`.
-	params.ExtraEIPs = make([]string, 0, len(paramsV5.ExtraEIPs))
-	for _, eip := range paramsV5.ExtraEIPs {
-		eipName := fmt.Sprintf("ethereum_%d", eip)
-		params.ExtraEIPs = append(params.ExtraEIPs, eipName)
-	}
-
+	params.EVMChannels = types.DefaultEVMChannels
 
 	// DefaultEVMChannels are for Evmos mainnet
 	// leave empty for testnet
