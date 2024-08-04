@@ -254,6 +254,8 @@ func TestMsgCreateValidator(t *testing.T) {
 				types.NewDescription("T", "E", "S", "T", "Z"),
 				commissions,
 				sdk.OneInt(),
+				sdk.ZeroInt(),
+				sdk.ZeroDec(),
 			)
 			require.NoError(t, err)
 			srv := keeper.NewMsgServerImpl(&nw.App.StakingKeeper)
