@@ -4,8 +4,8 @@ package keeper
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	v7 "github.com/evmos/evmos/v19/x/evm/migrations/v7"
 	v6 "github.com/evmos/evmos/v19/x/evm/migrations/v6"
+	v7 "github.com/evmos/evmos/v19/x/evm/migrations/v7"
 	"github.com/evmos/evmos/v19/x/evm/types"
 )
 
