@@ -222,7 +222,7 @@ func (suite *AnteTestSuite) CreateTestEIP712MsgCreateValidator(from sdk.AccAddre
 		stakingtypes.NewCommissionRates(math.LegacyOneDec(), math.LegacyOneDec(), math.LegacyOneDec()),
 		math.OneInt(),
 		math.ZeroInt(),
-		sdk.ZeroDec(),
+		false,
 	)
 	suite.Require().NoError(err)
 	return suite.CreateTestEIP712SingleMessageTxBuilder(priv, chainID, gas, gasAmount, msgCreate)
@@ -241,7 +241,7 @@ func (suite *AnteTestSuite) CreateTestEIP712MsgCreateValidator2(from sdk.AccAddr
 		stakingtypes.NewCommissionRates(math.LegacyOneDec(), math.LegacyOneDec(), math.LegacyOneDec()),
 		math.OneInt(),
 		math.ZeroInt(),
-		sdk.ZeroDec(),
+		false,
 	)
 	suite.Require().NoError(err)
 	return suite.CreateTestEIP712SingleMessageTxBuilder(priv, chainID, gas, gasAmount, msgCreate)
