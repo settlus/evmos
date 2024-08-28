@@ -33,8 +33,10 @@ var (
 
 func init() {
 	v1beta1.RegisterProposalType(ProposalTypeRegisterERC20)
+	v1beta1.RegisterProposalType(ProposalTypeRegisterCoin)
 	v1beta1.RegisterProposalType(ProposalTypeToggleTokenConversion)
 	govcdc.ModuleCdc.Amino.RegisterConcrete(&RegisterERC20Proposal{}, "erc20/RegisterERC20Proposal", nil)
+	govcdc.ModuleCdc.Amino.RegisterConcrete(&RegisterCoinProposal{}, "erc20/RegisterCoinProposal", nil)
 	govcdc.ModuleCdc.Amino.RegisterConcrete(&ToggleTokenConversionProposal{}, "erc20/ToggleTokenConversionProposal", nil)
 }
 
